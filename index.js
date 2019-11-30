@@ -152,7 +152,7 @@ class Test4 extends Test1 {
 
 
 async function testall() {
-  const t = new Test4() // Test2() Test3()
+  const t = new Test4() // Test2() Test3() Test4()
   await tester(t.name(), t.testFunc.bind(t))
 }
 
