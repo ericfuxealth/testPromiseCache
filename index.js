@@ -124,8 +124,35 @@ class Test3 {
   }
 }
 
+// ======================================================================
+// Test4: Generic wrapper on any existing functions of a super class
+// ======================================================================
+const listOfFunctionsToWrap = ['testFunc']
+class Test4 extends Test1 {
+  name() {
+    return 'test4'
+  }
+
+  _memoizeSuper(method) {
+    let cache = {};
+    return async function () {
+      let args = JSON.stringify(arguments);
+      cache[args] = cache[args] || method.apply(this, arguments);
+      return cache[args];
+    };
+  }
+
+  constructor() {
+    super()
+    listOfFunctionsToWrap.forEach(func => {
+      this[func] = this._memoizeSuper(super[func])
+    })
+  }
+}
+
+
 async function testall() {
-  const t = new Test1() // Test2() Test3()
+  const t = new Test4() // Test2() Test3()
   await tester(t.name(), t.testFunc.bind(t))
 }
 
