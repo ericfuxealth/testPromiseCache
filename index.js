@@ -34,10 +34,9 @@ function hardWorkingPromise(n) {
   })
 }
 
-// Generates a cascading chain of calls to the promise wrapping the hardworking function
-// testFunc is the different ways we test this.
+// Generates a cascading chain of calls to the promise wrapping the hardworking function func
 // ============================
-function compute(testFunc, n) {
+function compute(func, n) {
   const breakdown = []
   while (n >= 10) {
     const c = n % 10
@@ -46,14 +45,16 @@ function compute(testFunc, n) {
   }
   breakdown.push(n)
 
-  return Promise.all(breakdown.map(n => testFunc(n))).then(a => _.sum(a))
+  return Promise.all(breakdown.map(n => func(n))).then(a => _.sum(a))
 }
 
-async function tester(name, testFunc) {
+// Run numberOfTests number of simulations in parallel
+// Each simulation takes a random number and calls func on that number (by calling compute)
+async function tester(name, func) {
   console.log(name)
   const numbers = [...Array(numberOfTests).keys()].map(() => getRandomInt(MaxInt))
 
-  return Promise.all(numbers.map(n => compute(testFunc, n))).then(() => {
+  return Promise.all(numbers.map(n => compute(func, n))).then(() => {
     console.log(called)
   })
 }
@@ -128,31 +129,63 @@ class Test3 {
 // Test4: Generic wrapper on any existing functions of a super class
 // ======================================================================
 const listOfFunctionsToWrap = ['testFunc']
+
+// Caches the result of a method for a given object.
+// The result is we will never call the same promise twice within the same object
+function _memoize(method, targetObject) {
+  const cache = {}
+  // console.log('.... _memoize called targetObject.name', _memoize.name)
+  return async function () {
+    // eslint-disable-next-line prefer-rest-params
+    const args = JSON.stringify(arguments)
+    // @ts-ignore
+    // eslint-disable-next-line prefer-rest-params
+    cache[args] = cache[args] || method.apply(targetObject, arguments)
+    // @ts-ignore
+    return cache[args]
+  }
+}
+
 class Test4 extends Test1 {
   name() {
     return 'test4'
   }
 
-  _memoizeSuper(method) {
-    let cache = {};
-    return async function () {
-      let args = JSON.stringify(arguments);
-      cache[args] = cache[args] || method.apply(this, arguments);
-      return cache[args];
-    };
-  }
-
   constructor() {
     super()
     listOfFunctionsToWrap.forEach(func => {
-      this[func] = this._memoizeSuper(super[func])
+      this[func] = _memoize(super[func], this)
     })
   }
 }
 
 
+// ======================================================================
+// Test5: Override with class Prototype
+// ======================================================================
+class Test5 extends Test1 {
+  name() {
+    return 'test5'
+  }
+}
+
+function wrapOverrides(prototypeChild, prototypeParent) {
+  listOfFunctionsToWrap.forEach((method) => {
+    if (prototypeParent[method]) {
+      prototypeChild[method] = async function (...args) {
+        // console.log('Running method ', method, 'of ', prototypeChild)
+        return _memoize(prototypeParent[method], this)(...args)
+      }
+    } else {
+      throw new Error(`Method ${method} is not defined`)
+    }
+  })
+}
+
+wrapOverrides(Test5.prototype, Test1.prototype)
+
 async function testall() {
-  const t = new Test4() // Test2() Test3() Test4()
+  const t = new Test5() // Test4() // Test2() Test3() Test4()
   await tester(t.name(), t.testFunc.bind(t))
 }
 
