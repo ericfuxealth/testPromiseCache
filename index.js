@@ -186,8 +186,25 @@ function wrapOverrides(prototypeChild, prototypeParent) {
 wrapOverrides(Test5.prototype, Test1.prototype)
 
 async function testall() {
-  const t = new Test5() // Test4() // Test2() Test3() Test4()
+  const TestClass = Test5
+
+  const t = new TestClass()
+  // once
   await tester(t.name(), t.testFunc.bind(t))
+  _.values(called).forEach(v => {
+    if (v !== 1) {
+      throw new Error('failed: expect each base function to be called exactly once')
+    }
+  })
+
+  // twice
+  const t2 = new TestClass()
+  await tester(t2.name(), t2.testFunc.bind(t2))
+  _.values(called).forEach(v => {
+    if (v !== 2) {
+      throw new Error('failed: expect each base function to be called exactly twice')
+    }
+  })
 }
 
 testall()
