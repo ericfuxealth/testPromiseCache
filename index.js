@@ -133,11 +133,12 @@ const listOfFunctionsToWrap = ['testFunc']
 // Caches the result of a method for a given object.
 // The result is we will never call the same promise twice within the same object
 function _memoize(method, targetObject) {
-  const cache = {}
+  targetObject.__promise_result_cache__ = targetObject.__promise_result_cache__ || {}
   // console.log('.... _memoize called targetObject.name', _memoize.name)
   return async function () {
     // eslint-disable-next-line prefer-rest-params
     const args = JSON.stringify(arguments)
+    const cache = targetObject.__promise_result_cache__
     // @ts-ignore
     // eslint-disable-next-line prefer-rest-params
     cache[args] = cache[args] || method.apply(targetObject, arguments)
